@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Simple Chat</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        * { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; }
+        .chat-bubble { animation: popIn 0.2s ease; }
+        @keyframes popIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        .fade-in { animation: fadeIn 0.3s ease; }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        ::-webkit-scrollbar { width: 4px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #d1d5db; border-radius: 20px; }
+    </style>
+</head>
+<body class="bg-gray-100 min-h-screen">
+
+    <!-- ============ HOME SCREEN ============ -->
+    <div id="homeScreen" class="min-h-screen flex items-center justify-center p-4">
+        <div class="w-full max-w-sm bg-white rounded-3xl shadow-xl p-8 text-center fade-in">
+            <div class="text-6xl mb-4">💬</div>
+            <h1 class="text-2xl font-bold text-gray-900 mb-2">Simple Chat</h1>
+            <p class="text-gray-500 text-sm mb-6">Anonymous chat room. No login needed.</p>
+            
+            <input type="text" id="usernameInput" placeholder="Nama kamu..." 
+                class="w-full px-4 py-3 bg-gray-100 rounded-xl text-sm mb-4 focus:outline-none focus:ring-2 focus:ring-gray-900"
+                maxlength="20" autocomplete="off">
+            
+            <button onclick="createRoom()" class="w-full bg-gray-900 text-white py-3 rounded-xl font-semibold text-sm mb-3 hover:bg-gray-800 active:scale-95 transition-all">
+                <i class="fas fa-plus mr-2"></i>Buat Room Baru
+            </button>
+            
+            <div class="relative my-4">
+                <div class="absolute inset-0 flex items-center"><div class="w-full border-t border-gray-200"></div></div>
+                <div class="relative flex justify-center text-xs"><span class="bg-white px-3 text-gray-400">atau gabung</span></div>
+            </div>
+            
+            <div class="flex gap-2">
+                <input type="text" id="roomCodeInput" placeholder="Kode Room" 
+                    class="flex-1 px-4 py-3 bg-gray-100 rounded-xl text-sm uppercase tracking-widest text-center font-bold focus:outline-none focus:ring-2 focus:ring-gray-900"
+                    maxlength="6" oninput="this.value=this.value.replace(/[^A-Za-z0-9]/g,'').toUpperCase()" autocomplete="off">
+                <button onclick="joinRoom()" class="px-6 py-3 bg-gray-200 text-gray-700 rounded-xl font-semibold text-sm hover:bg-gray-300 active:scale-95 transition-all">
+                    Join
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ============ CHAT SCREEN ============ -->
+    <div id="chatScreen" class="hidden min-h-screen flex flex-col">
+        
+        <!-- Header -->
+        <header class="bg-white border-b px-4 py-3 flex items-center justify-between sticky top-0 z-10 shadow-sm">
+            <div class="flex items-center gap-3">
+                <button onclick="leaveRoom()" class="text-gray-400 hover:text-red-500 p-1">
+                    <i class="fas fa-arrow-left"></i>
+                </button>
+                <div>
+                    <h1 class="font-bold text-gray-900 text-sm">💬 Chat Room</h1>
+                    <p class="text-xs text-gray-500">
+                        Kode: <span class="font-mono font-bold text-gray-900 bg-gray-100 px-2 py-0.5 rounded" id="roomCode">------</span>
+                    </p>
+                </div>
+            </div>
+            <button onclick="copyRoomCode()" class="text-gray-400 hover:text-gray-700 p-2 text-sm" title="Copy kode room">
+                <i class="fas fa-copy"></i> <span class="text-xs">Copy</span>
+            </button>
+        </header>
+        
+        <!-- Messages -->
+        <div id="messagesContainer" class="flex-1 overflow-y-auto px-4 py-4 space-y-3 bg-gradient-to-b from-gray-50 to-white">
+            <div class="text-center py-8" id="messagesLoading">
+                <div class="animate-pulse flex flex-col items-center">
+                    <div class="w-8 h-8 bg-gray-300 rounded-full mb-2"></div>
+                    <div class="text-xs text-gray-400">Menghubungkan...</div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Input -->
+        <div class="bg-white border-t px-3 py-3 shadow-lg">
+            <div class="flex gap-2 items-center">
+                <input type="text" id="messageInput" placeholder="Tulis pesan..." 
+                    class="flex-1 px-4 py-3 bg-gray-100 rounded-full text-sm focus:outline-none focus:ring-2 focus:ring-gray-900"
+                    onkeypress="if(event.key==='Enter')sendMessage()" autocomplete="off">
+                <button onclick="sendMessage()" class="w-12 h-12 bg-gray-900 text-white rounded-full flex items-center justify-center hover:bg-gray-800 active:scale-90 transition-all flex-shrink-0">
+                    <i class="fas fa-paper-plane text-sm"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast -->
+    <div id="toast" class="fixed bottom-6 left-1/2 -translate-x-1/2 bg-gray-900 text-white px-5 py-3 rounded-2xl shadow-2xl hidden text-sm font-medium z-50 whitespace-nowrap">
+        <span id="toastMsg"></span>
+    </div>
+
+    <script>
+        // ============================================
+        // ⚠️ GANTI DENGAN CONFIG KAMU
+        // ============================================
+        var SUPABASE_URL = 'https://YOUR_PROJECT.supabase.co';
+        var SUPABASE_KEY = 'YOUR_ANON_KEY';
+        
+        // ============================================
+        // INIT SUPABASE
+        // ============================================
+        var supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+        var username = '';
+        var currentRoom = null;
+        var channel = null;
+        var userColor = '#111827';
+        
+        // Random color for user
+        var colors = ['#3b82f6','#ef4444','#10b981','#f59e0b','#8b5cf6','#ec4899','#06b6d4','#f97316','#6366f1','#14b8a6'];
+        
+        function randomColor() {
+            return colors[Math.floor(Math.random() * colors.length)];
+        }
+        
+        // ============================================
+        // CREATE ROOM
+        // ============================================
+        function createRoom() {
+            username = document.getElementById('usernameInput').value.trim() || 'Anonymous';
+            userColor = randomColor();
+            
+            supabase.rpc('generate_room_code').then(function(r) {
+                if (r.error) { showToast('❌ Gagal buat room'); return; }
+                var code = r.data;
+                
+                supabase.from('chat_rooms').insert({code: code}).select().single().then(function(res) {
+                    if (res.error) { showToast('❌ Gagal buat room'); return; }
+                    enterRoom(res.data);
+                });
+            });
+        }
+        
+        // ============================================
+        // JOIN ROOM
+        // ============================================
+        function joinRoom() {
+            username = document.getElementById('usernameInput').value.trim() || 'Anonymous';
+            userColor = randomColor();
+            var code = document.getElementById('roomCodeInput').value.trim().toUpperCase();
+            
+            if (!code || code.length < 6) { showToast('⚠️ Masukkan 6 karakter kode room'); return; }
+            
+            supabase.from('chat_rooms').select('*').eq('code', code).single().then(function(res) {
+                if (!res.data) { showToast('❌ Room tidak ditemukan!'); return; }
+                enterRoom(res.data);
+            });
+        }
+        
+        // ============================================
+        // ENTER ROOM
+        // ============================================
+        function enterRoom(room) {
+            currentRoom = room;
+            document.getElementById('homeScreen').classList.add('hidden');
+            document.getElementById('chatScreen').classList.remove('hidden');
+            document.getElementById('roomCode').textContent = room.code;
+            document.getElementById('messageInput').value = '';
+            document.getElementById('messageInput').focus();
+            
+            loadMessages();
+            subscribeToRoom(room.id);
+        }
+        
+        function leaveRoom() {
+            if (channel) supabase.removeChannel(channel);
+            currentRoom = null;
+            document.getElementById('homeScreen').classList.remove('hidden');
+            document.getElementById('chatScreen').classList.add('hidden');
+            document.getElementById('messagesContainer').innerHTML = '<div class="text-center py-8"><div class="animate-pulse flex flex-col items-center"><div class="w-8 h-8 bg-gray-300 rounded-full mb-2"></div><div class="text-xs text-gray-400">Menghubungkan...</div></div></div>';
+        }
+        
+        function copyRoomCode() {
+            navigator.clipboard.writeText(currentRoom.code).then(function() {
+                showToast('📋 Kode disalin! Share ke temanmu');
+            });
+        }
+        
+        // ============================================
+        // LOAD MESSAGES
+        // ============================================
+        function loadMessages() {
+            supabase.from('chat_messages').select('*').eq('room_id', currentRoom.id).order('created_at', {ascending: true}).then(function(res) {
+                document.getElementById('messagesContainer').innerHTML = '';
+                if (res.data && res.data.length > 0) {
+                    res.data.forEach(function(msg) { addMessage(msg, false); });
+                } else {
+                    document.getElementById('messagesContainer').innerHTML = '<div class="text-center py-12"><div class="text-4xl mb-2">💬</div><p class="text-gray-400 text-sm">Belum ada pesan</p><p class="text-gray-300 text-xs mt-1">Mulai chat sekarang!</p></div>';
+                }
+                scrollToBottom();
+            });
+        }
+        
+        // ============================================
+        // SEND MESSAGE
+        // ============================================
+        function sendMessage() {
+            var input = document.getElementById('messageInput');
+            var content = input.value.trim();
+            if (!content || !currentRoom) return;
+            
+            supabase.from('chat_messages').insert({
+                room_id: currentRoom.id,
+                username: username,
+                content: content,
+                color: userColor
+            }).then(function(res) {
+                if (res.error) showToast('❌ Gagal kirim');
+            });
+            
+            input.value = '';
+        }
+        
+        // ============================================
+        // REALTIME SUBSCRIBE
+        // ============================================
+        function subscribeToRoom(roomId) {
+            if (channel) supabase.removeChannel(channel);
+            
+            channel = supabase
+                .channel('room-' + roomId)
+                .on('postgres_changes', 
+                    { event: 'INSERT', schema: 'public', table: 'chat_messages', filter: 'room_id=eq.' + roomId },
+                    function(payload) {
+                        addMessage(payload.new, true);
+                    }
+                )
+                .subscribe(function(status) {
+                    console.log('Realtime status:', status);
+                });
+        }
+        
+        // ============================================
+        // ADD MESSAGE TO UI
+        // ============================================
+        function addMessage(msg, isNew) {
+            var container = document.getElementById('messagesContainer');
+            var isMe = (msg.username === username);
+            
+            var div = document.createElement('div');
+            div.className = 'flex ' + (isMe ? 'justify-end' : 'justify-start') + (isNew ? ' chat-bubble' : '');
+            
+            div.innerHTML = 
+                '<div class="max-w-[80%]">' +
+                (!isMe ? '<p class="text-xs font-bold mb-1 ml-3" style="color:' + (msg.color || '#111827') + '">' + escapeHtml(msg.username) + '</p>' : '') +
+                '<div class="px-4 py-2.5 rounded-2xl text-sm ' + 
+                    (isMe ? 'bg-gray-900 text-white rounded-br-md shadow-sm' : 'bg-white shadow-sm border rounded-bl-md text-gray-800') + '">' +
+                escapeHtml(msg.content) + '</div>' +
+                '<p class="text-[10px] text-gray-400 mt-1 ' + (isMe ? 'text-right mr-1' : 'ml-3') + '">' + formatTime(msg.created_at) + '</p>' +
+                '</div>';
+            
+            container.appendChild(div);
+            if (isNew) scrollToBottom();
+        }
+        
+        function scrollToBottom() {
+            var container = document.getElementById('messagesContainer');
+            setTimeout(function() { container.scrollTop = container.scrollHeight; }, 50);
+        }
+        
+        // ============================================
+        // UTILS
+        // ============================================
+        function formatTime(d) {
+            if (!d) return '';
+            var dt = new Date(d);
+            return String(dt.getHours()).padStart(2,'0') + ':' + String(dt.getMinutes()).padStart(2,'0');
+        }
+        
+        function showToast(m) {
+            var t = document.getElementById('toast');
+            document.getElementById('toastMsg').textContent = m;
+            t.classList.remove('hidden');
+            clearTimeout(t._t);
+            t._t = setTimeout(function() { t.classList.add('hidden'); }, 2500);
+        }
+        
+        function escapeHtml(t) {
+            var d = document.createElement('div');
+            d.textContent = t || '';
+            return d.innerHTML;
+        }
+        
+        // Fokus input saat halaman dimuat
+        document.getElementById('usernameInput').focus();
+    </script>
+</body>
+</html>
