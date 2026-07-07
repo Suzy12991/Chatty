@@ -101,198 +101,98 @@
     </div>
 
     <script>
-        // ============================================
-        // ⚠️ GANTI DENGAN CONFIG KAMU
-        // ============================================
         var SUPABASE_URL = 'https://chieagnneldopundhqsw.supabase.co';
-        var SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNoaWVhZ25uZWxkb3B1bmRocXN3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODMzMjI3NDMsImV4cCI6MjA5ODg5ODc0M30.S6cMrHuFijnI6CqjuBrvAHBToTZQOctO7VPm28Uj3KA';
+        var SUPABASE_KEY = 'sb_publishable_uQlLV_IM9-OFnwmZD8WxHQ_fRuVEarJ';
         
-        // ============================================
-        // INIT SUPABASE
-        // ============================================
         var supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-        var username = '';
-        var currentRoom = null;
-        var channel = null;
-        var userColor = '#111827';
+        var username = '', currentRoom = null, channel = null, userColor = '#111827';
+        var colors = ['#3b82f6','#ef4444','#10b981','#f59e0b','#8b5cf6','#ec4899','#06b6d4','#f97316'];
         
-        // Random color for user
-        var colors = ['#3b82f6','#ef4444','#10b981','#f59e0b','#8b5cf6','#ec4899','#06b6d4','#f97316','#6366f1','#14b8a6'];
+        function randomColor() { return colors[Math.floor(Math.random() * colors.length)]; }
+        function genCode() { var c='',ch='ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'; for(var i=0;i<6;i++)c+=ch.charAt(Math.floor(Math.random()*ch.length)); return c; }
         
-        function randomColor() {
-            return colors[Math.floor(Math.random() * colors.length)];
-        }
-        
-        // ============================================
-        // CREATE ROOM
-        // ============================================
         function createRoom() {
             username = document.getElementById('usernameInput').value.trim() || 'Anonymous';
             userColor = randomColor();
+            var code = genCode();
             
-            supabase.rpc('generate_room_code').then(function(r) {
-                if (r.error) { showToast('❌ Gagal buat room'); return; }
-                var code = r.data;
-                
-                supabase.from('chat_rooms').insert({code: code}).select().single().then(function(res) {
-                    if (res.error) { showToast('❌ Gagal buat room'); return; }
-                    enterRoom(res.data);
-                });
+            supabase.from('chat_rooms').insert({code:code}).select().single().then(function(r) {
+                if (r.error) { if(r.error.code==='23505') createRoom(); else showToast('❌ Gagal: '+r.error.message); return; }
+                enterRoom(r.data);
             });
         }
         
-        // ============================================
-        // JOIN ROOM
-        // ============================================
         function joinRoom() {
             username = document.getElementById('usernameInput').value.trim() || 'Anonymous';
             userColor = randomColor();
             var code = document.getElementById('roomCodeInput').value.trim().toUpperCase();
+            if(!code||code.length<6) { showToast('⚠️ Masukkan kode room'); return; }
             
-            if (!code || code.length < 6) { showToast('⚠️ Masukkan 6 karakter kode room'); return; }
-            
-            supabase.from('chat_rooms').select('*').eq('code', code).single().then(function(res) {
-                if (!res.data) { showToast('❌ Room tidak ditemukan!'); return; }
-                enterRoom(res.data);
+            supabase.from('chat_rooms').select('*').eq('code',code).single().then(function(r) {
+                if(!r.data) { showToast('❌ Room tidak ditemukan'); return; }
+                enterRoom(r.data);
             });
         }
         
-        // ============================================
-        // ENTER ROOM
-        // ============================================
         function enterRoom(room) {
             currentRoom = room;
             document.getElementById('homeScreen').classList.add('hidden');
             document.getElementById('chatScreen').classList.remove('hidden');
             document.getElementById('roomCode').textContent = room.code;
-            document.getElementById('messageInput').value = '';
             document.getElementById('messageInput').focus();
-            
             loadMessages();
-            subscribeToRoom(room.id);
+            subscribe(room.id);
         }
         
         function leaveRoom() {
-            if (channel) supabase.removeChannel(channel);
+            if(channel) supabase.removeChannel(channel);
             currentRoom = null;
             document.getElementById('homeScreen').classList.remove('hidden');
             document.getElementById('chatScreen').classList.add('hidden');
-            document.getElementById('messagesContainer').innerHTML = '<div class="text-center py-8"><div class="animate-pulse flex flex-col items-center"><div class="w-8 h-8 bg-gray-300 rounded-full mb-2"></div><div class="text-xs text-gray-400">Menghubungkan...</div></div></div>';
+            document.getElementById('messagesContainer').innerHTML = '<div class="text-center py-8 text-gray-400">Menghubungkan...</div>';
         }
         
-        function copyRoomCode() {
-            navigator.clipboard.writeText(currentRoom.code).then(function() {
-                showToast('📋 Kode disalin! Share ke temanmu');
-            });
-        }
-        
-        // ============================================
-        // LOAD MESSAGES
-        // ============================================
         function loadMessages() {
-            supabase.from('chat_messages').select('*').eq('room_id', currentRoom.id).order('created_at', {ascending: true}).then(function(res) {
+            supabase.from('chat_messages').select('*').eq('room_id',currentRoom.id).order('created_at',{ascending:true}).then(function(r) {
                 document.getElementById('messagesContainer').innerHTML = '';
-                if (res.data && res.data.length > 0) {
-                    res.data.forEach(function(msg) { addMessage(msg, false); });
-                } else {
-                    document.getElementById('messagesContainer').innerHTML = '<div class="text-center py-12"><div class="text-4xl mb-2">💬</div><p class="text-gray-400 text-sm">Belum ada pesan</p><p class="text-gray-300 text-xs mt-1">Mulai chat sekarang!</p></div>';
-                }
-                scrollToBottom();
+                if(r.data&&r.data.length>0) { r.data.forEach(function(m){renderMsg(m,false);}); }
+                else { document.getElementById('messagesContainer').innerHTML='<div class="text-center py-12 text-gray-400">💬 Mulai chat!</div>'; }
+                scrollBottom();
             });
         }
         
-        // ============================================
-        // SEND MESSAGE
-        // ============================================
         function sendMessage() {
-            var input = document.getElementById('messageInput');
-            var content = input.value.trim();
-            if (!content || !currentRoom) return;
-            
-            supabase.from('chat_messages').insert({
-                room_id: currentRoom.id,
-                username: username,
-                content: content,
-                color: userColor
-            }).then(function(res) {
-                if (res.error) showToast('❌ Gagal kirim');
-            });
-            
+            var input = document.getElementById('messageInput'), content = input.value.trim();
+            if(!content||!currentRoom) return;
+            supabase.from('chat_messages').insert({room_id:currentRoom.id,username:username,content:content,color:userColor}).then(function(){});
             input.value = '';
         }
         
-        // ============================================
-        // REALTIME SUBSCRIBE
-        // ============================================
-        function subscribeToRoom(roomId) {
-            if (channel) supabase.removeChannel(channel);
-            
-            channel = supabase
-                .channel('room-' + roomId)
-                .on('postgres_changes', 
-                    { event: 'INSERT', schema: 'public', table: 'chat_messages', filter: 'room_id=eq.' + roomId },
-                    function(payload) {
-                        addMessage(payload.new, true);
-                    }
-                )
-                .subscribe(function(status) {
-                    console.log('Realtime status:', status);
-                });
+        function subscribe(roomId) {
+            if(channel) supabase.removeChannel(channel);
+            channel = supabase.channel('room-'+roomId)
+                .on('postgres_changes',{event:'INSERT',schema:'public',table:'chat_messages',filter:'room_id=eq.'+roomId},
+                    function(p) { renderMsg(p.new,true); })
+                .subscribe();
         }
         
-        // ============================================
-        // ADD MESSAGE TO UI
-        // ============================================
-        function addMessage(msg, isNew) {
-            var container = document.getElementById('messagesContainer');
-            var isMe = (msg.username === username);
-            
-            var div = document.createElement('div');
-            div.className = 'flex ' + (isMe ? 'justify-end' : 'justify-start') + (isNew ? ' chat-bubble' : '');
-            
-            div.innerHTML = 
-                '<div class="max-w-[80%]">' +
-                (!isMe ? '<p class="text-xs font-bold mb-1 ml-3" style="color:' + (msg.color || '#111827') + '">' + escapeHtml(msg.username) + '</p>' : '') +
-                '<div class="px-4 py-2.5 rounded-2xl text-sm ' + 
-                    (isMe ? 'bg-gray-900 text-white rounded-br-md shadow-sm' : 'bg-white shadow-sm border rounded-bl-md text-gray-800') + '">' +
-                escapeHtml(msg.content) + '</div>' +
-                '<p class="text-[10px] text-gray-400 mt-1 ' + (isMe ? 'text-right mr-1' : 'ml-3') + '">' + formatTime(msg.created_at) + '</p>' +
-                '</div>';
-            
-            container.appendChild(div);
-            if (isNew) scrollToBottom();
+        function renderMsg(msg,isNew) {
+            var c=document.getElementById('messagesContainer'), isMe=(msg.username===username);
+            var d=document.createElement('div');
+            d.className='flex '+(isMe?'justify-end':'justify-start')+(isNew?' chat-bubble':'');
+            d.innerHTML='<div class="max-w-[80%]">'+
+                (!isMe?'<p class="text-xs font-bold mb-1 ml-3" style="color:'+(msg.color||'#111827')+'">'+escapeHtml(msg.username)+'</p>':'')+
+                '<div class="px-4 py-2.5 rounded-2xl text-sm '+(isMe?'bg-gray-900 text-white':'bg-white shadow-sm border text-gray-800')+'">'+escapeHtml(msg.content)+'</div>'+
+                '<p class="text-[10px] text-gray-400 mt-1 '+(isMe?'text-right mr-1':'ml-3')+'">'+formatTime(msg.created_at)+'</p></div>';
+            c.appendChild(d);
+            if(isNew) scrollBottom();
         }
         
-        function scrollToBottom() {
-            var container = document.getElementById('messagesContainer');
-            setTimeout(function() { container.scrollTop = container.scrollHeight; }, 50);
-        }
-        
-        // ============================================
-        // UTILS
-        // ============================================
-        function formatTime(d) {
-            if (!d) return '';
-            var dt = new Date(d);
-            return String(dt.getHours()).padStart(2,'0') + ':' + String(dt.getMinutes()).padStart(2,'0');
-        }
-        
-        function showToast(m) {
-            var t = document.getElementById('toast');
-            document.getElementById('toastMsg').textContent = m;
-            t.classList.remove('hidden');
-            clearTimeout(t._t);
-            t._t = setTimeout(function() { t.classList.add('hidden'); }, 2500);
-        }
-        
-        function escapeHtml(t) {
-            var d = document.createElement('div');
-            d.textContent = t || '';
-            return d.innerHTML;
-        }
-        
-        // Fokus input saat halaman dimuat
-        document.getElementById('usernameInput').focus();
+        function scrollBottom() { var c=document.getElementById('messagesContainer'); setTimeout(function(){c.scrollTop=c.scrollHeight;},50); }
+        function formatTime(d) { if(!d)return''; var dt=new Date(d); return String(dt.getHours()).padStart(2,'0')+':'+String(dt.getMinutes()).padStart(2,'0'); }
+        function showToast(m) { var t=document.getElementById('toast'); document.getElementById('toastMsg').textContent=m; t.classList.remove('hidden'); clearTimeout(t._t); t._t=setTimeout(function(){t.classList.add('hidden');},2500); }
+        function escapeHtml(t) { var d=document.createElement('div'); d.textContent=t||''; return d.innerHTML; }
+        function copyRoomCode() { navigator.clipboard.writeText(currentRoom.code).then(function(){showToast('📋 Kode disalin!');}); }
     </script>
 </body>
 </html>
