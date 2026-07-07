@@ -1,53 +1,86 @@
 <!DOCTYPE html>
-<html lang="id">
+<html lang="id" class="">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>Simple Chat</title>
+    <title>Chatty ✨</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script>
+        tailwind.config = { darkMode: 'class' }
+    </script>
     <style>
-        * { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; }
-        .chat-bubble { animation: popIn 0.2s ease; }
-        @keyframes popIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        @import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&display=swap');
+        * { font-family: 'Nunito', sans-serif; }
+        
+        .chat-bubble { animation: popIn 0.25s cubic-bezier(0.68, -0.55, 0.27, 1.55); }
+        @keyframes popIn { from { opacity: 0; transform: scale(0.8) translateY(10px); } to { opacity: 1; transform: scale(1) translateY(0); } }
+        
         .fade-in { animation: fadeIn 0.3s ease; }
         @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
-        ::-webkit-scrollbar { width: 4px; }
+        
+        .float { animation: float 3s ease-in-out infinite; }
+        @keyframes float { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-8px); } }
+        
+        ::-webkit-scrollbar { width: 5px; }
         ::-webkit-scrollbar-track { background: transparent; }
         ::-webkit-scrollbar-thumb { background: #d1d5db; border-radius: 20px; }
+        .dark ::-webkit-scrollbar-thumb { background: #4b5563; }
+        
+        /* PC: max width */
+        @media (min-width: 768px) {
+            .chat-container { max-width: 600px; margin: 0 auto; }
+            .home-container { max-width: 420px; }
+        }
     </style>
 </head>
-<body class="bg-gray-100 min-h-screen">
+<body class="bg-pink-50 dark:bg-gray-900 min-h-screen transition-colors">
 
     <!-- ============ HOME SCREEN ============ -->
     <div id="homeScreen" class="min-h-screen flex items-center justify-center p-4">
-        <div class="w-full max-w-sm bg-white rounded-3xl shadow-xl p-8 text-center fade-in">
-            <div class="text-6xl mb-4">💬</div>
-            <h1 class="text-2xl font-bold text-gray-900 mb-2">Simple Chat</h1>
-            <p class="text-gray-500 text-sm mb-6">Anonymous chat room. No login needed.</p>
+        <div class="home-container w-full bg-white dark:bg-gray-800 rounded-3xl shadow-2xl p-8 text-center fade-in mx-auto border-2 border-pink-200 dark:border-gray-700">
             
-            <input type="text" id="usernameInput" placeholder="Nama kamu..." 
-                class="w-full px-4 py-3 bg-gray-100 rounded-xl text-sm mb-4 focus:outline-none focus:ring-2 focus:ring-gray-900"
-                maxlength="20" autocomplete="off">
+            <!-- Logo -->
+            <div class="text-7xl mb-3 float">💬</div>
+            <h1 class="text-3xl font-extrabold text-gray-900 dark:text-white mb-1">Chatty ✨</h1>
+            <p class="text-gray-500 dark:text-gray-400 text-sm mb-6">Ngobrol seru tanpa login! 🎉</p>
             
-            <button onclick="createRoom()" class="w-full bg-gray-900 text-white py-3 rounded-xl font-semibold text-sm mb-3 hover:bg-gray-800 active:scale-95 transition-all">
-                <i class="fas fa-plus mr-2"></i>Buat Room Baru
+            <!-- Input Nama -->
+            <div class="mb-4">
+                <label class="block text-left text-xs font-bold text-gray-600 dark:text-gray-400 mb-1.5 ml-1">
+                    🎭 Nama Kamu
+                </label>
+                <input type="text" id="usernameInput" placeholder="Masukkan nama panggilan..." 
+                    class="w-full px-5 py-4 bg-pink-50 dark:bg-gray-700 border-2 border-pink-200 dark:border-gray-600 rounded-2xl text-base font-semibold text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:border-pink-400 dark:focus:border-pink-400 transition-colors"
+                    maxlength="20" autocomplete="off">
+            </div>
+            
+            <!-- Buat Room -->
+            <button onclick="createRoom()" class="w-full bg-pink-500 hover:bg-pink-600 text-white py-4 rounded-2xl font-bold text-base mb-3 active:scale-95 transition-all shadow-lg shadow-pink-200 dark:shadow-pink-900/30">
+                ✨ Buat Room Baru
             </button>
             
-            <div class="relative my-4">
-                <div class="absolute inset-0 flex items-center"><div class="w-full border-t border-gray-200"></div></div>
-                <div class="relative flex justify-center text-xs"><span class="bg-white px-3 text-gray-400">atau gabung</span></div>
+            <!-- Divider -->
+            <div class="relative my-5">
+                <div class="absolute inset-0 flex items-center"><div class="w-full border-t-2 border-pink-100 dark:border-gray-700"></div></div>
+                <div class="relative flex justify-center text-sm"><span class="bg-white dark:bg-gray-800 px-4 text-gray-400 dark:text-gray-500 font-bold">atau</span></div>
             </div>
             
+            <!-- Join Room -->
             <div class="flex gap-2">
-                <input type="text" id="roomCodeInput" placeholder="Kode Room" 
-                    class="flex-1 px-4 py-3 bg-gray-100 rounded-xl text-sm uppercase tracking-widest text-center font-bold focus:outline-none focus:ring-2 focus:ring-gray-900"
+                <input type="text" id="roomCodeInput" placeholder="KODE ROOM" 
+                    class="flex-1 px-5 py-4 bg-pink-50 dark:bg-gray-700 border-2 border-pink-200 dark:border-gray-600 rounded-2xl text-base uppercase tracking-[0.3em] text-center font-extrabold text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:border-pink-400 dark:focus:border-pink-400 transition-colors"
                     maxlength="6" oninput="this.value=this.value.replace(/[^A-Za-z0-9]/g,'').toUpperCase()" autocomplete="off">
-                <button onclick="joinRoom()" class="px-6 py-3 bg-gray-200 text-gray-700 rounded-xl font-semibold text-sm hover:bg-gray-300 active:scale-95 transition-all">
-                    Join
+                <button onclick="joinRoom()" class="px-7 py-4 bg-pink-100 dark:bg-gray-700 text-pink-600 dark:text-pink-400 rounded-2xl font-bold text-base hover:bg-pink-200 dark:hover:bg-gray-600 active:scale-95 transition-all">
+                    Join 🔗
                 </button>
             </div>
+            
+            <!-- Dark mode toggle -->
+            <button onclick="toggleDark()" class="mt-5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 text-sm">
+                <i class="fas fa-moon dark:fa-sun mr-1"></i> <span id="darkLabel">Dark Mode</span>
+            </button>
         </div>
     </div>
 
@@ -55,81 +88,103 @@
     <div id="chatScreen" class="hidden min-h-screen flex flex-col">
         
         <!-- Header -->
-        <header class="bg-white border-b px-4 py-3 flex items-center justify-between sticky top-0 z-10 shadow-sm">
+        <header class="bg-white dark:bg-gray-800 border-b-2 border-pink-100 dark:border-gray-700 px-4 py-3 flex items-center justify-between sticky top-0 z-10 shadow-sm">
             <div class="flex items-center gap-3">
-                <button onclick="leaveRoom()" class="text-gray-400 hover:text-red-500 p-1">
-                    <i class="fas fa-arrow-left"></i>
+                <button onclick="leaveRoom()" class="text-gray-400 hover:text-red-400 p-2 rounded-full hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors">
+                    <i class="fas fa-arrow-left text-lg"></i>
                 </button>
                 <div>
-                    <h1 class="font-bold text-gray-900 text-sm">💬 Chat Room</h1>
-                    <p class="text-xs text-gray-500">
-                        Kode: <span class="font-mono font-bold text-gray-900 bg-gray-100 px-2 py-0.5 rounded" id="roomCode">------</span>
+                    <h1 class="font-extrabold text-gray-900 dark:text-white text-base">💬 Ngobrol</h1>
+                    <p class="text-xs text-gray-500 dark:text-gray-400">
+                        Kode: <span class="font-mono font-bold text-pink-500 bg-pink-50 dark:bg-pink-900/20 px-2 py-0.5 rounded-lg text-sm" id="roomCode">------</span>
                     </p>
                 </div>
             </div>
-            <button onclick="copyRoomCode()" class="text-gray-400 hover:text-gray-700 p-2 text-sm" title="Copy kode room">
-                <i class="fas fa-copy"></i> <span class="text-xs">Copy</span>
-            </button>
+            <div class="flex gap-1">
+                <button onclick="toggleDark()" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 p-2 rounded-full">
+                    <i class="fas fa-moon dark:fa-sun"></i>
+                </button>
+                <button onclick="copyRoomCode()" class="text-pink-500 hover:text-pink-600 p-2 rounded-full hover:bg-pink-50 dark:hover:bg-pink-900/20 transition-colors" title="Copy kode">
+                    <i class="fas fa-copy text-lg"></i>
+                </button>
+            </div>
         </header>
         
         <!-- Messages -->
-        <div id="messagesContainer" class="flex-1 overflow-y-auto px-4 py-4 space-y-3 bg-gradient-to-b from-gray-50 to-white">
-            <div class="text-center py-8" id="messagesLoading">
-                <div class="animate-pulse flex flex-col items-center">
-                    <div class="w-8 h-8 bg-gray-300 rounded-full mb-2"></div>
-                    <div class="text-xs text-gray-400">Menghubungkan...</div>
-                </div>
+        <div id="messagesContainer" class="flex-1 overflow-y-auto px-4 py-5 space-y-4 bg-pink-50/30 dark:bg-gray-900 chat-container w-full">
+            <div class="text-center py-12" id="messagesLoading">
+                <div class="text-5xl mb-3">🔌</div>
+                <p class="text-gray-400 dark:text-gray-500 font-semibold">Menghubungkan...</p>
             </div>
         </div>
         
+        <!-- Online users indicator -->
+        <div class="bg-white dark:bg-gray-800 border-t border-pink-50 dark:border-gray-700 px-4 py-1.5 text-center">
+            <p class="text-xs text-gray-400 dark:text-gray-500" id="onlineIndicator">🟢 Kamu bergabung!</p>
+        </div>
+        
         <!-- Input -->
-        <div class="bg-white border-t px-3 py-3 shadow-lg">
-            <div class="flex gap-2 items-center">
-                <input type="text" id="messageInput" placeholder="Tulis pesan..." 
-                    class="flex-1 px-4 py-3 bg-gray-100 rounded-full text-sm focus:outline-none focus:ring-2 focus:ring-gray-900"
+        <div class="bg-white dark:bg-gray-800 border-t-2 border-pink-100 dark:border-gray-700 px-4 py-4 chat-container w-full">
+            <div class="flex gap-3 items-center">
+                <input type="text" id="messageInput" placeholder="Ketik pesanmu di sini..." 
+                    class="flex-1 px-5 py-4 bg-pink-50 dark:bg-gray-700 border-2 border-pink-100 dark:border-gray-600 rounded-full text-base text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:border-pink-400 dark:focus:border-pink-400 transition-colors font-semibold"
                     onkeypress="if(event.key==='Enter')sendMessage()" autocomplete="off">
-                <button onclick="sendMessage()" class="w-12 h-12 bg-gray-900 text-white rounded-full flex items-center justify-center hover:bg-gray-800 active:scale-90 transition-all flex-shrink-0">
-                    <i class="fas fa-paper-plane text-sm"></i>
+                <button onclick="sendMessage()" class="w-14 h-14 bg-pink-500 hover:bg-pink-600 text-white rounded-full flex items-center justify-center active:scale-90 transition-all shadow-lg shadow-pink-200 dark:shadow-pink-900/30 flex-shrink-0">
+                    <i class="fas fa-paper-plane text-lg"></i>
                 </button>
             </div>
         </div>
     </div>
 
     <!-- Toast -->
-    <div id="toast" class="fixed bottom-6 left-1/2 -translate-x-1/2 bg-gray-900 text-white px-5 py-3 rounded-2xl shadow-2xl hidden text-sm font-medium z-50 whitespace-nowrap">
+    <div id="toast" class="fixed bottom-6 left-1/2 -translate-x-1/2 bg-gray-900 dark:bg-white dark:text-gray-900 text-white px-6 py-3 rounded-full shadow-2xl hidden text-sm font-bold z-50 whitespace-nowrap">
         <span id="toastMsg"></span>
     </div>
 
     <script>
+        // ============================================
+        // CONFIG
+        // ============================================
         var SUPABASE_URL = 'https://chieagnneldopundhqsw.supabase.co';
         var SUPABASE_KEY = 'sb_publishable_uQlLV_IM9-OFnwmZD8WxHQ_fRuVEarJ';
         
         var supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
         var username = '', currentRoom = null, channel = null, userColor = '#111827';
-        var colors = ['#3b82f6','#ef4444','#10b981','#f59e0b','#8b5cf6','#ec4899','#06b6d4','#f97316'];
+        var colors = ['#f43f5e','#3b82f6','#10b981','#f59e0b','#8b5cf6','#ec4899','#06b6d4','#f97316','#6366f1','#14b8a6'];
         
         function randomColor() { return colors[Math.floor(Math.random() * colors.length)]; }
         function genCode() { var c='',ch='ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'; for(var i=0;i<6;i++)c+=ch.charAt(Math.floor(Math.random()*ch.length)); return c; }
         
+        // ============================================
+        // DARK MODE
+        // ============================================
+        if(localStorage.getItem('darkMode')==='true'){document.documentElement.classList.add('dark');}
+        function toggleDark(){var d=document.documentElement.classList.toggle('dark');localStorage.setItem('darkMode',d);}
+        
+        // ============================================
+        // ROOM
+        // ============================================
         function createRoom() {
-            username = document.getElementById('usernameInput').value.trim() || 'Anonymous';
+            username = document.getElementById('usernameInput').value.trim();
+            if(!username){showToast('🎭 Masukkan nama dulu yuk!');document.getElementById('usernameInput').focus();return;}
             userColor = randomColor();
             var code = genCode();
             
-            supabase.from('chat_rooms').insert({code:code}).select().single().then(function(r) {
-                if (r.error) { if(r.error.code==='23505') createRoom(); else showToast('❌ Gagal: '+r.error.message); return; }
+            supabase.from('chat_rooms').insert({code:code,name:username+"'s Room"}).select().single().then(function(r){
+                if(r.error){if(r.error.code==='23505')createRoom();else showToast('❌ Gagal');return;}
                 enterRoom(r.data);
             });
         }
         
         function joinRoom() {
-            username = document.getElementById('usernameInput').value.trim() || 'Anonymous';
+            username = document.getElementById('usernameInput').value.trim();
+            if(!username){showToast('🎭 Masukkan nama dulu yuk!');document.getElementById('usernameInput').focus();return;}
             userColor = randomColor();
             var code = document.getElementById('roomCodeInput').value.trim().toUpperCase();
-            if(!code||code.length<6) { showToast('⚠️ Masukkan kode room'); return; }
+            if(!code||code.length<6){showToast('🔑 Masukkan kode room!');return;}
             
-            supabase.from('chat_rooms').select('*').eq('code',code).single().then(function(r) {
-                if(!r.data) { showToast('❌ Room tidak ditemukan'); return; }
+            supabase.from('chat_rooms').select('*').eq('code',code).single().then(function(r){
+                if(!r.data){showToast('❌ Room gak ketemu nih!');return;}
                 enterRoom(r.data);
             });
         }
@@ -140,6 +195,7 @@
             document.getElementById('chatScreen').classList.remove('hidden');
             document.getElementById('roomCode').textContent = room.code;
             document.getElementById('messageInput').focus();
+            document.getElementById('onlineIndicator').textContent = '🟢 Kamu bergabung sebagai '+username+'!';
             loadMessages();
             subscribe(room.id);
         }
@@ -149,14 +205,17 @@
             currentRoom = null;
             document.getElementById('homeScreen').classList.remove('hidden');
             document.getElementById('chatScreen').classList.add('hidden');
-            document.getElementById('messagesContainer').innerHTML = '<div class="text-center py-8 text-gray-400">Menghubungkan...</div>';
+            document.getElementById('messagesContainer').innerHTML = '<div class="text-center py-12"><div class="text-5xl mb-3">🔌</div><p class="text-gray-400 font-semibold">Menghubungkan...</p></div>';
         }
         
+        // ============================================
+        // MESSAGES
+        // ============================================
         function loadMessages() {
-            supabase.from('chat_messages').select('*').eq('room_id',currentRoom.id).order('created_at',{ascending:true}).then(function(r) {
+            supabase.from('chat_messages').select('*').eq('room_id',currentRoom.id).order('created_at',{ascending:true}).then(function(r){
                 document.getElementById('messagesContainer').innerHTML = '';
-                if(r.data&&r.data.length>0) { r.data.forEach(function(m){renderMsg(m,false);}); }
-                else { document.getElementById('messagesContainer').innerHTML='<div class="text-center py-12 text-gray-400">💬 Mulai chat!</div>'; }
+                if(r.data&&r.data.length>0){r.data.forEach(function(m){renderMsg(m,false);});}
+                else{document.getElementById('messagesContainer').innerHTML='<div class="text-center py-16"><div class="text-6xl mb-4">💬</div><p class="text-gray-400 dark:text-gray-500 font-bold text-lg">Mulai obrolan!</p><p class="text-gray-300 dark:text-gray-600 text-sm mt-1">Ketik pesan pertama kamu...</p></div>';}
                 scrollBottom();
             });
         }
@@ -172,18 +231,35 @@
             if(channel) supabase.removeChannel(channel);
             channel = supabase.channel('room-'+roomId)
                 .on('postgres_changes',{event:'INSERT',schema:'public',table:'chat_messages',filter:'room_id=eq.'+roomId},
-                    function(p) { renderMsg(p.new,true); })
+                    function(p){renderMsg(p.new,true);})
                 .subscribe();
         }
         
-        function renderMsg(msg,isNew) {
-            var c=document.getElementById('messagesContainer'), isMe=(msg.username===username);
-            var d=document.createElement('div');
-            d.className='flex '+(isMe?'justify-end':'justify-start')+(isNew?' chat-bubble':'');
-            d.innerHTML='<div class="max-w-[80%]">'+
-                (!isMe?'<p class="text-xs font-bold mb-1 ml-3" style="color:'+(msg.color||'#111827')+'">'+escapeHtml(msg.username)+'</p>':'')+
-                '<div class="px-4 py-2.5 rounded-2xl text-sm '+(isMe?'bg-gray-900 text-white':'bg-white shadow-sm border text-gray-800')+'">'+escapeHtml(msg.content)+'</div>'+
-                '<p class="text-[10px] text-gray-400 mt-1 '+(isMe?'text-right mr-1':'ml-3')+'">'+formatTime(msg.created_at)+'</p></div>';
+        function renderMsg(msg, isNew) {
+            var c = document.getElementById('messagesContainer');
+            var isMe = (msg.username === username);
+            
+            // Clear empty state
+            if(c.querySelector('.text-6xl')) c.innerHTML = '';
+            
+            var d = document.createElement('div');
+            d.className = 'flex ' + (isMe ? 'justify-end' : 'justify-start') + (isNew ? ' chat-bubble' : '');
+            
+            d.innerHTML = 
+                '<div class="max-w-[80%]">' +
+                // Nama user
+                '<p class="text-xs font-extrabold mb-1.5 ' + (isMe ? 'text-right mr-2' : 'ml-3') + '" style="color:' + (msg.color || '#111827') + '">' +
+                (isMe ? 'Kamu' : escapeHtml(msg.username)) + '</p>' +
+                // Bubble chat
+                '<div class="px-5 py-3.5 rounded-3xl text-base font-semibold leading-relaxed ' + 
+                    (isMe ? 'bg-pink-500 text-white rounded-br-xl shadow-lg shadow-pink-200 dark:shadow-pink-900/30' : 
+                            'bg-white dark:bg-gray-700 shadow-md border-2 border-pink-100 dark:border-gray-600 rounded-bl-xl text-gray-800 dark:text-gray-200') + '">' +
+                escapeHtml(msg.content) + '</div>' +
+                // Waktu
+                '<p class="text-[11px] text-gray-400 dark:text-gray-500 mt-1.5 font-semibold ' + (isMe ? 'text-right mr-2' : 'ml-3') + '">' + 
+                formatTime(msg.created_at) + '</p>' +
+                '</div>';
+            
             c.appendChild(d);
             if(isNew) scrollBottom();
         }
@@ -192,7 +268,7 @@
         function formatTime(d) { if(!d)return''; var dt=new Date(d); return String(dt.getHours()).padStart(2,'0')+':'+String(dt.getMinutes()).padStart(2,'0'); }
         function showToast(m) { var t=document.getElementById('toast'); document.getElementById('toastMsg').textContent=m; t.classList.remove('hidden'); clearTimeout(t._t); t._t=setTimeout(function(){t.classList.add('hidden');},2500); }
         function escapeHtml(t) { var d=document.createElement('div'); d.textContent=t||''; return d.innerHTML; }
-        function copyRoomCode() { navigator.clipboard.writeText(currentRoom.code).then(function(){showToast('📋 Kode disalin!');}); }
+        function copyRoomCode() { navigator.clipboard.writeText(currentRoom.code).then(function(){showToast('📋 Kode disalin! Share ke temanmu~');}); }
     </script>
 </body>
 </html>
